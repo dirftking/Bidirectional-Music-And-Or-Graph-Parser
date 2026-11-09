@@ -19,15 +19,246 @@ compatibility. Project artifacts use the version prefix
 `bidirectional-music-and-or-graph-parser`.
 
 ```bash
-pip install -e .
+python -m pip install -e ".[research,web]"
 python -m unittest discover -s test -p "test_*.py"
 python -m audio2musicaog.cli --help
-python music_aog_web.py
 ```
+
+These commands validate the source package only. Follow the complete deployment
+procedure below before starting the model or web services.
 
 Research definitions and experiment notes are under [`research/`](./research/).
 Model weights, uploaded audio, generated results, credentials, and local runtime
 files are intentionally excluded from version control.
+
+## Deployment (Linux / AutoDL, recommended)
+
+Run every command below from a fresh shell. The recommended production path is
+Linux with one NVIDIA GPU. A 24 GiB GPU is the practical minimum for BF16;
+32 GiB VRAM, 64 GiB system RAM, and at least 50 GiB free disk space are
+recommended for one checkpoint. Downloading both checkpoints requires roughly
+another 17 GiB.
+
+### 1. Clone the repository
+
+The repository is private. Authenticate GitHub first, then clone it into the
+AutoDL data disk:
+
+```bash
+cd /root/autodl-tmp
+git clone https://github.com/dirftking/Bidirectional-Music-And-Or-Graph-Parser.git
+cd Bidirectional-Music-And-Or-Graph-Parser
+export PROJECT_ROOT="$(pwd)"
+```
+
+When Git prompts for HTTPS credentials, use the GitHub username `dirftking`
+and a Personal Access Token with read access to this repository; a normal
+GitHub account password will not work. Alternatively, authenticate with GitHub
+CLI first and run `gh repo clone dirftking/Bidirectional-Music-And-Or-Graph-Parser`.
+
+Do not place tokens or passwords in the clone URL, shell scripts, or committed
+files.
+
+### 2. Create the exact environment
+
+Python 3.12, FFmpeg 7, PyTorch 2.9.1, and CUDA 12.8 wheels are the pinned
+baseline. The included SGLang source supplies the serving runtime.
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda create -n bimusicaog --override-channels -c conda-forge \
+  python=3.12 "ffmpeg=7" pip -y
+conda activate bimusicaog
+
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install --index-url https://download.pytorch.org/whl/cu128 \
+  --no-deps "torch==2.9.1+cu128" "torchaudio==2.9.1+cu128"
+python -m pip install -e "sglang/python"
+python -m pip install "nvidia-cudnn-cu12==9.16.0.29"
+python -m pip install --index-url https://pypi.org/simple \
+  -c repro/constraints.txt -e ".[research,web]"
+python -m pip check
+```
+
+Do not install the project `torch-runtime` extra in this Linux/SGLang path:
+the bundled SGLang package pins its own compatible `torchcodec` version. The
+`torch-runtime` extra is retained for the standalone Transformers path.
+
+Confirm that the GPU is visible before downloading the model:
+
+```bash
+nvidia-smi
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))"
+ffmpeg -version | head -n 1
+```
+
+### 3. Download a checkpoint into the required path
+
+| Variant | Hugging Face repository | Required local directory | Use |
+|---|---|---|---|
+| Thinking (recommended) | [`OpenMOSS-Team/MOSS-Music-8B-Thinking`](https://huggingface.co/OpenMOSS-Team/MOSS-Music-8B-Thinking) | `weights/MOSS-Music-8B-Thinking` | stronger analytical reasoning |
+| Instruct | [`OpenMOSS-Team/MOSS-Music-8B-Instruct`](https://huggingface.co/OpenMOSS-Team/MOSS-Music-8B-Instruct) | `weights/MOSS-Music-8B-Instruct` | faster, direct instruction following |
+
+For the recommended Thinking model:
+
+```bash
+cd "$PROJECT_ROOT"
+mkdir -p weights
+hf download OpenMOSS-Team/MOSS-Music-8B-Thinking \
+  --local-dir "$PROJECT_ROOT/weights/MOSS-Music-8B-Thinking"
+
+python repro/check_environment.py \
+  --model-path "$PROJECT_ROOT/weights/MOSS-Music-8B-Thinking"
+```
+
+To use the Instruct variant, replace `Thinking` with `Instruct` in both the
+repository ID and local directory. A valid directory must contain
+`config.json`, `model.safetensors.index.json`, `tokenizer_config.json`, and all
+`model-*-of-*.safetensors` shards. Never commit the `weights/` directory.
+
+### 4. Start the SGLang model server
+
+From the repository root, with the `bimusicaog` environment active:
+
+```bash
+export MODEL_DIR="$PROJECT_ROOT/weights/MOSS-Music-8B-Thinking"
+
+python -m sglang.launch_server \
+  --model-path "$MODEL_DIR" \
+  --trust-remote-code \
+  --host 127.0.0.1 \
+  --port 30000 \
+  --mem-fraction-static 0.75 \
+  --chunked-prefill-size 2048 \
+  --max-prefill-tokens 16384 \
+  --disable-piecewise-cuda-graph
+```
+
+Wait until the server reports that it is ready, then verify it in another SSH
+terminal:
+
+```bash
+curl --fail http://127.0.0.1:30000/health
+```
+
+Do not start the web service before this command succeeds.
+
+### 5. Start the web service
+
+In a second SSH terminal:
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate bimusicaog
+cd /root/autodl-tmp/Bidirectional-Music-And-Or-Graph-Parser
+
+export MOSS_MUSIC_SGLANG_BASE_URL="http://127.0.0.1:30000"
+export MUSIC_AOG_WEB_HOST="127.0.0.1"
+export MUSIC_AOG_WEB_PORT="7861"
+export MUSIC_AOG_JOBS_ROOT="$PWD/research_outputs/web_jobs"
+
+python music_aog_web.py
+```
+
+Verify both the web process and its connection to SGLang:
+
+```bash
+curl --fail http://127.0.0.1:7861/health
+```
+
+The returned JSON must contain `"status":"ok"` and
+`"sglang_ready":true`.
+
+### 6. Open the private web interface from a local computer
+
+Keep both AutoDL services bound to `127.0.0.1`. On the local computer, open an
+SSH tunnel using the host and port shown by AutoDL:
+
+```bash
+export AUTODL_HOST="connect.example.com"
+export AUTODL_SSH_PORT="12345"
+ssh -N -L 7861:127.0.0.1:7861 \
+  -p "$AUTODL_SSH_PORT" "root@$AUTODL_HOST"
+```
+
+Keep this terminal open and visit <http://127.0.0.1:7861/>. If local port 7861
+is occupied, use `-L 17861:127.0.0.1:7861` and open
+<http://127.0.0.1:17861/> instead.
+
+### 7. Optional persistent processes with tmux
+
+After activating the environment and setting `PROJECT_ROOT`, the following
+commands keep both processes alive after SSH disconnects:
+
+```bash
+cd "$PROJECT_ROOT"
+mkdir -p logs
+PYTHON_BIN="$(command -v python)"
+
+tmux new-session -d -s bmusic-model \
+  "cd \"$PROJECT_ROOT\" && exec \"$PYTHON_BIN\" -m sglang.launch_server \
+  --model-path \"$PROJECT_ROOT/weights/MOSS-Music-8B-Thinking\" \
+  --trust-remote-code --host 127.0.0.1 --port 30000 \
+  --mem-fraction-static 0.75 --chunked-prefill-size 2048 \
+  --max-prefill-tokens 16384 --disable-piecewise-cuda-graph \
+  > logs/model.log 2>&1"
+
+tmux new-session -d -s bmusic-web \
+  "cd \"$PROJECT_ROOT\" && export MOSS_MUSIC_SGLANG_BASE_URL=http://127.0.0.1:30000 \
+  MUSIC_AOG_WEB_HOST=127.0.0.1 MUSIC_AOG_WEB_PORT=7861 \
+  MUSIC_AOG_JOBS_ROOT=\"$PROJECT_ROOT/research_outputs/web_jobs\" && \
+  exec \"$PYTHON_BIN\" music_aog_web.py > logs/web.log 2>&1"
+
+tmux ls
+tail -f logs/model.log
+```
+
+Useful commands are `tmux attach -t bmusic-model`,
+`tmux attach -t bmusic-web`, `tail -f logs/web.log`, and
+`tmux kill-session -t <name>`.
+
+### 8. Verification and tests
+
+```bash
+cd "$PROJECT_ROOT"
+python -m unittest discover -s test -p "test_*.py"
+python -m audio2musicaog.cli --help
+curl --fail http://127.0.0.1:30000/health
+curl --fail http://127.0.0.1:7861/health
+```
+
+The repository currently has 41 unit tests. The web service accepts MP3, WAV,
+and FLAC files up to 200 MiB. Jobs and logs are stored below
+`research_outputs/web_jobs/` and are excluded from Git.
+
+### Deployment environment variables
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `MOSS_MUSIC_SGLANG_BASE_URL` | `http://127.0.0.1:30000` | SGLang endpoint used by the web worker |
+| `MUSIC_AOG_WEB_HOST` | `127.0.0.1` | web bind address; keep private and use SSH tunnelling |
+| `MUSIC_AOG_WEB_PORT` | `7861` | web port |
+| `MUSIC_AOG_JOBS_ROOT` | `research_outputs/web_jobs` | uploaded files, intermediate artifacts, results, and logs |
+| `MUSIC_AOG_MAX_UPLOAD_BYTES` | `209715200` | maximum upload size |
+| `MUSIC_AOG_MOSS_MAX_NEW_TOKENS` | `2048` | first-pass MOSS generation budget |
+| `MUSIC_AOG_MOSS_REPAIR_MAX_NEW_TOKENS` | `4096` | structured-output repair budget |
+| `MUSIC_AOG_MOSS_REPAIR_ATTEMPTS` | `2` | maximum repair attempts |
+
+### Common deployment failures
+
+- **`ninja` is missing:** run `python -m pip install ninja` in the same Conda
+  environment and restart the model process.
+- **CUDA out of memory:** stop other GPU processes, confirm with `nvidia-smi`,
+  and retain `--mem-fraction-static 0.75`. Do not run two model servers.
+- **The page opens but the model is unavailable:** check port 30000 first and
+  confirm `MOSS_MUSIC_SGLANG_BASE_URL`; inspect `logs/model.log`.
+- **The page cannot be opened locally:** the web service or SSH tunnel is not
+  running, or the local port is already occupied. Do not change the server bind
+  address to `0.0.0.0` merely to bypass the tunnel.
+- **Audio decoding fails:** run `ffmpeg -version`; reinstall FFmpeg 7 in the
+  same Conda environment.
+- **A checkpoint is rejected:** verify the exact local directory and run
+  `python repro/check_environment.py --model-path <directory>` before restart.
 
 This repository builds on the upstream
 [OpenMOSS/MOSS-Music](https://github.com/OpenMOSS/MOSS-Music) implementation.

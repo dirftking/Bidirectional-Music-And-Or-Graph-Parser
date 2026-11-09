@@ -28,6 +28,18 @@ dependencies = [
 [project.optional-dependencies]
 flash-attn = ["flash-attn"]
 
+research = [
+  "accelerate>=1.0",
+  "librosa==1.0.0",
+  "miditoolkit==1.0.1",
+]
+
+web = [
+  "fastapi>=0.115,<1.0",
+  "python-multipart>=0.0.9",
+  "uvicorn[standard]>=0.30,<1.0",
+]
+
 torch-runtime = [
   "accelerate",
   "torch==2.9.1+cu128",
