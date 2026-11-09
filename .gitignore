@@ -12,8 +12,18 @@ __pycache__/
 .venv/
 venv/
 .env
+*.tar.gz
+*.zip
+*.docx
+*.pdf
+*.log
+*.pid
+.ssh/
+secrets/
 
 weights/*
+research_outputs/
+offload/
 
 test/*.mp3
 test/*.wav

@@ -1,0 +1,3 @@
+# transformers==4.57.1 requires huggingface-hub<1.0. Newer Gradio releases
+# require huggingface-hub>=1.x and cause a long resolver backtrack.
+gradio==5.44.1

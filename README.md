@@ -1,4 +1,42 @@
-# MOSS-Music
+# Bidirectional Music And-Or Graph Parser
+
+**Bidirectional Music And-Or Graph Parser** is both the project name and the
+algorithm name. It converts music audio into an auditable MusicAOG candidate
+graph, combines MOSS-Music semantic observations with conventional MIR
+evidence, and alternates Bottom-up evidence with Top-down musical constraints
+to select a final Parse Graph.
+
+The current research implementation includes:
+
+- MOSS-Music structure, harmony, key, and tempo observation extraction;
+- MIR beat, boundary, chroma, key, and chord candidate extraction;
+- multi-source candidate fusion with provenance and confidence scores;
+- bidirectional key/chord inference with sequence-level transition constraints;
+- POP909-oriented evaluation utilities and an interactive audio web interface.
+
+The Python implementation remains in the `audio2musicaog` package for command
+compatibility. Project artifacts use the version prefix
+`bidirectional-music-and-or-graph-parser`.
+
+```bash
+pip install -e .
+python -m unittest discover -s test -p "test_*.py"
+python -m audio2musicaog.cli --help
+python music_aog_web.py
+```
+
+Research definitions and experiment notes are under [`research/`](./research/).
+Model weights, uploaded audio, generated results, credentials, and local runtime
+files are intentionally excluded from version control.
+
+This repository builds on the upstream
+[OpenMOSS/MOSS-Music](https://github.com/OpenMOSS/MOSS-Music) implementation.
+The original model documentation follows below so that model setup and
+attribution remain available.
+
+---
+
+## MOSS-Music upstream foundation
 
 <p align="center">
   <img src="./assets/MOSS-Music.png" width="58%" alt="MOSS-Music logo" />

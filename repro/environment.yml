@@ -1,0 +1,11 @@
+name: moss-music-repro
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - ffmpeg=7
+  - pip
+
+# Install the Python/CUDA layer from the repository root after creating this env:
+# python -m pip --isolated install --index-url https://download.pytorch.org/whl/cu128 --no-deps "torch==2.9.1+cu128" "torchaudio==2.9.1+cu128"
+# python -m pip install --index-url https://pypi.org/simple -c repro/constraints.txt -e ".[torch-runtime]"

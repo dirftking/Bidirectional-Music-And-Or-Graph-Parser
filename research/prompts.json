@@ -1,0 +1,38 @@
+{
+  "overview": {
+    "title": "整体音乐描述",
+    "prompt": "请只依据音频，对这首音乐做可核查的整体描述。分别说明：流派/风格、情绪及其变化、速度与律动、主要乐器与音色、人声、旋律与和声、曲式结构、制作与音质、可能的使用场景。能定位时给出 mm:ss 时间证据；无法可靠判断的内容请明确写“不确定”，不要用文件名或外部知识猜测。"
+  },
+  "structure": {
+    "title": "曲式与段落结构",
+    "prompt": "请分析曲式结构。按时间顺序列出 intro、verse、pre-chorus、chorus、bridge、solo、outro 等实际出现的段落，给出每段的起止时间、听觉线索、与其他段落的重复或对比关系。若段落标签有歧义，请给出备选解释和置信度。"
+  },
+  "harmony": {
+    "title": "调性与和声",
+    "prompt": "请分析调性与和声。报告主调/调式、可能的调性变化、主要和弦进行，并尽可能给出带时间戳的和弦序列。区分直接听到的证据与推断；对转位、经过和弦或模糊和声不要过度确定，并为关键结论给出高/中/低置信度。"
+  },
+  "rhythm": {
+    "title": "速度、节拍与律动",
+    "prompt": "请分析速度、拍号和律动。估计 BPM、拍号、强拍位置、速度是否变化，以及鼓组/打击乐/贝斯形成的 groove。请给出支持判断的时间区间，并说明半拍/双倍速度等可能的替代解释。"
+  },
+  "timbre": {
+    "title": "配器、人声与制作",
+    "prompt": "请分析配器、人声和制作。列出主要乐器/音源及进入退出时间，描述人声类型、演唱技法、织体、声场、动态、混响、压缩、失真等制作特征。请将确定听见的声源与可能的合成/效果器推断分开。"
+  },
+  "lyrics": {
+    "title": "歌词转写",
+    "prompt": "请转写音频中的歌词，保留重复段落，并按句给出 mm:ss 起止时间。听不清的词用 [听不清] 标记，不要根据押韵或上下文擅自补全；无歌词或仅有人声哼唱时请明确说明。"
+  },
+  "interpretation": {
+    "title": "证据驱动的音乐解译",
+    "prompt": "请做证据驱动的音乐解译：讨论声音材料、曲式、节奏、和声、音色、演唱与制作如何共同形成情绪轨迹、张力释放和叙事感。每个解释性结论都要附具体时间点和可听见的音乐证据，并给出至少一种合理的替代解释；不要把主观联想写成作品事实。"
+  },
+  "uncertainty": {
+    "title": "不确定性与可证伪性审计",
+    "prompt": "请审计对这段音乐可能作出的分析。用表格列出关键判断、对应时间证据、置信度、可能的错误来源，以及可用何种 MIR 工具或人工标注复核。重点检查 BPM、调性、和弦、段落边界、乐器识别、歌词和情绪解释。"
+  },
+  "musicaog": {
+    "title": "MusicAOG 候选解析图",
+    "prompt": "请把音频分析为一个“由音频推断的 MusicAOG 候选 parse graph”，并且只输出一个合法 JSON 对象，不要输出 Markdown 代码围栏或说明文字。顶层字段必须是：schema_version（固定为 \"0.1\"）、representation（固定为 \"music_aog_audio_candidate\"）、root、nodes、productions、relations、uncertainties。nodes 中每项包含 id、kind（and 或 terminal）、level（structural、textural 或 metrical）、type（section、period、ensemble、phrase、radical 或 metrical）、onset_seconds、offset_seconds、attributes、confidence、evidence；evidence 是带 start_seconds、end_seconds、description 的数组。productions 中每项包含 parent、children、rule、confidence。relations 中每项包含 source、target、type（succession、variation、diad 或 synchronization）、attributes、confidence、evidence。先建立 section/period 层级，再在能可靠听辨时建立 phrase/radical 与 metrical 节点；和声写在 metrical 节点属性中，具体和弦事件可写为 radical；重复或变化用 variation 关系；物理先后用 succession；事件与节拍对应关系用 synchronization。所有 id 必须唯一，所有引用必须指向已存在节点，时间单位为秒。无法从音频可靠恢复的音符、声部或制作规则不要编造，放入 uncertainties，并将低置信节点保持粗粒度。"
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/audio2musicaog/candidate-set-0.2.schema.json",
+  "title": "Audio2MusicAOG candidate set",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "representation",
+    "root",
+    "nodes",
+    "productions",
+    "relations",
+    "uncertainties",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "representation": { "const": "audio2musicaog_candidate_set" },
+    "root": { "type": "string", "minLength": 1 },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "productions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/production" }
+    },
+    "relations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relation" }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/uncertainty" }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["created_at_utc", "audio_sha256", "audio_filename", "model", "assembler"],
+      "properties": {
+        "created_at_utc": { "type": "string" },
+        "audio_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "audio_filename": { "type": "string" },
+        "model": { "type": "string" },
+        "assembler": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "span": {
+      "type": "object",
+      "required": ["start_seconds", "end_seconds"],
+      "properties": {
+        "start_seconds": { "type": "number", "minimum": 0 },
+        "end_seconds": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["start_seconds", "end_seconds", "description", "source"],
+      "properties": {
+        "start_seconds": { "type": "number", "minimum": 0 },
+        "end_seconds": { "type": "number", "minimum": 0 },
+        "description": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "level", "type", "span", "attributes", "confidence", "evidence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["and", "or", "terminal"] },
+        "level": { "enum": ["song", "section", "phrase", "metrical", "harmony", "note", "event"] },
+        "type": {
+          "enum": [
+            "song",
+            "section",
+            "section_label",
+            "phrase",
+            "measure",
+            "beat",
+            "chord",
+            "note",
+            "key_event",
+            "instrument_event",
+            "vocal_event"
+          ]
+        },
+        "span": { "$ref": "#/$defs/span" },
+        "attributes": { "type": "object" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "production": {
+      "type": "object",
+      "required": ["id", "parent", "children", "rule", "probability", "selected"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "parent": { "type": "string", "minLength": 1 },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rule": { "enum": ["and_decomposition", "or_choice"] },
+        "probability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "selected": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "required": ["id", "source", "target", "type", "attributes", "confidence", "evidence"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["succession", "variation", "diad", "synchronization"] },
+        "attributes": { "type": "object" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "alternative": {
+      "type": "object",
+      "required": ["value", "confidence", "source"],
+      "properties": {
+        "value": {},
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "uncertainty": {
+      "type": "object",
+      "required": ["scope_id", "field", "alternatives", "explanation"],
+      "properties": {
+        "scope_id": { "type": ["string", "null"] },
+        "field": { "type": "string" },
+        "alternatives": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/alternative" }
+        },
+        "explanation": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+

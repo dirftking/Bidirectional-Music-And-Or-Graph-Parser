@@ -1,0 +1,15 @@
+{
+  "global": {
+    "title": "Global musical attributes",
+    "prompt": "Analyze only the supplied audio. Return exactly one JSON object and no Markdown. Use this shape: {\"duration_seconds\": number_or_null, \"tempo_bpm\": number_or_null, \"time_signature\": string_or_null, \"global_key\": string_or_null, \"key_changes\": [{\"start_seconds\": number, \"end_seconds\": number, \"key\": string, \"confidence\": number}], \"confidence\": number_between_0_and_1, \"uncertainties\": [string]}. Do not infer facts from the filename. Use null and explain in uncertainties when evidence is insufficient. For key names use forms such as C major or A minor."
+  },
+  "structure": {
+    "title": "Functional section structure",
+    "prompt": "Segment only the supplied audio into functional musical sections. Return exactly one JSON object and no Markdown. Use this shape: {\"sections\": [{\"id\": \"s1\", \"start_seconds\": number, \"end_seconds\": number, \"label\": \"intro|verse|pre_chorus|chorus|bridge|solo|outro|instrumental|unknown\", \"confidence\": number_between_0_and_1, \"alternative_labels\": [{\"label\": string, \"confidence\": number_between_0_and_1}], \"repeated_from\": string_or_null, \"evidence\": string}], \"uncertainties\": [string]}. Sections must be chronological, non-overlapping, and cover the audible clip as completely as the evidence permits. repeated_from must reference an earlier section id or be null. Preserve plausible alternative labels instead of hiding ambiguity."
+  },
+  "harmony": {
+    "title": "Timestamped chord sequence",
+    "prompt": "Analyze only the supplied audio and transcribe chords conservatively. Return exactly one JSON object and no Markdown. Use this shape: {\"chords\": [{\"start_seconds\": number, \"end_seconds\": number, \"label\": string, \"confidence\": number_between_0_and_1, \"evidence\": string}], \"uncertainties\": [string]}. Use Harte-style labels such as C:maj, A:min7, G:7, F#:dim, or N for no reliable chord. Chords must be chronological and non-overlapping. Prefer a coarse reliable sequence over fabricated fine timing."
+  }
+}
+

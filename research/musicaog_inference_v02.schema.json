@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/audio2musicaog/bidirectional-inference-0.2.schema.json",
+  "title": "Audio2MusicAOG bidirectional sequence inference artifact",
+  "type": "object",
+  "required": [
+    "artifact_version", "status", "problem", "inference_config", "score_definition",
+    "initial_selection", "final_selection", "inference_trace", "stop_reason",
+    "selection_changes", "source_artifact_sha256", "graph", "graph_errors", "created_at_utc"
+  ],
+  "properties": {
+    "artifact_version": {"const": "bidirectional-music-and-or-graph-parser/0.2"},
+    "status": {"enum": ["complete", "partial"]},
+    "problem": {"const": "bidirectional_audio_to_musicaog_parsing"},
+    "inference_config": {
+      "type": "object",
+      "required": [
+        "audio_weight", "key_weight", "transition_weight", "compatibility_floor",
+        "moss_source_weight", "max_iterations", "weights_tuned_on_test_set"
+      ],
+      "properties": {
+        "audio_weight": {"type": "number", "minimum": 0},
+        "key_weight": {"type": "number", "minimum": 0},
+        "transition_weight": {"type": "number", "exclusiveMinimum": 0},
+        "compatibility_floor": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "moss_source_weight": {"type": "number", "minimum": 0, "maximum": 1},
+        "max_iterations": {"type": "integer", "minimum": 1},
+        "weights_tuned_on_test_set": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "score_definition": {"type": "object"},
+    "initial_selection": {"$ref": "#/$defs/selection"},
+    "final_selection": {"$ref": "#/$defs/selection"},
+    "inference_trace": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "iteration", "key_before", "key_after", "changed_chord_choices",
+          "total_chord_choices", "state_changed", "sequence_path_log_score",
+          "mean_selected_transition_compatibility"
+        ]
+      }
+    },
+    "stop_reason": {"enum": ["fixed_point", "cycle_detected", "max_iterations"]},
+    "selection_changes": {
+      "type": "object",
+      "required": ["global_key", "chords", "total_chords"]
+    },
+    "source_artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "graph": {"type": "object"},
+    "graph_errors": {"type": "array", "items": {"type": "string"}},
+    "created_at_utc": {"type": "string"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "selection": {
+      "type": "object",
+      "required": ["global_key", "chords"],
+      "properties": {
+        "global_key": {"type": "string"},
+        "chords": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  }
+}
